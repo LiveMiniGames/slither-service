@@ -1,0 +1,9 @@
+{
+  "name": "fwhaydo-discordbot",
+  "version": "1.0.0",
+  "main": "bot.js",
+  "dependencies": {
+    "discord.js": "^14.0.0",
+    "pusher": "^5.2.0"
+  }
+}
