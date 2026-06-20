@@ -1,9 +1,8 @@
 {
-  "name": "fwhaydo-discordbot",
+  "name": "slither-service",
   "version": "1.0.0",
-  "main": "bot.js",
+  "main": "server.js",
   "dependencies": {
-    "discord.js": "^14.0.0",
-    "pusher": "^5.2.0"
+    "ws": "^8.16.0"
   }
 }
