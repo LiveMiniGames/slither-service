@@ -108,9 +108,11 @@ function tick() {
       y: head.y + Math.sin(p.angle) * speed
     };
  
-    // Circular world boundary — hitting the edge kills you, just like real slither.io
+    // Circular world boundary — hitting the edge kills you, just like real slither.io.
+    // Also catch NaN/Infinity here as a safety net: NaN > WORLD_RADIUS is always false in JS,
+    // which would otherwise let a corrupted position silently pass through the wall undetected.
     const distFromCenter = Math.sqrt(newHead.x * newHead.x + newHead.y * newHead.y);
-    if (distFromCenter > WORLD_RADIUS) {
+    if (!isFinite(distFromCenter) || distFromCenter > WORLD_RADIUS) {
       killPlayer(p);
       return;
     }
@@ -281,7 +283,11 @@ wss.on('connection', (ws) => {
     }
  
     if (data.type === 'input' && players[id]) {
-      if (typeof data.angle === 'number') players[id].targetAngle = data.angle;
+      // isFinite() rejects NaN and Infinity, unlike typeof === 'number' which lets them through.
+      // A NaN angle here would propagate into the snake's position, which would then make the
+      // wall-boundary check (distFromCenter > WORLD_RADIUS) silently always false for NaN,
+      // letting a glitched snake pass through walls undetected.
+      if (typeof data.angle === 'number' && isFinite(data.angle)) players[id].targetAngle = data.angle;
       players[id].boosting = !!data.boosting;
     }
  
