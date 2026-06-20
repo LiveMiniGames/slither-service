@@ -15,8 +15,8 @@ const FOOD_COUNT = 300;           // pellets on the map at once
 const TICK_RATE = 30;             // server updates per second (increased for smoothness)
 const BASE_SPEED = 3.6;
 const BOOST_SPEED = 6.5;
-const TURN_RATE = 0.18;           // how fast snakes can turn (increased for snappier feel)
-const SEGMENT_SPACING = 6;
+const TURN_RATE = 0.22;           // how fast snakes can turn (increased further for real slither.io feel)
+const SEGMENT_SPACING = 4;        // tighter spacing = smoother body curves through turns
 const STARTING_LENGTH = 12;
 const FOOD_VALUE = 1;             // length gained per food eaten
 const KILL_FOOD_MULTIPLIER = 0.5; // fraction of dead snake's length that becomes food
@@ -58,7 +58,8 @@ function spawnPlayer(id, name) {
   const p = randPos();
   const angle = Math.random() * Math.PI * 2;
   const segments = [];
-  for (let i = 0; i < STARTING_LENGTH; i++) {
+  const startSegCount = Math.max(20, Math.floor(STARTING_LENGTH * 2.2));
+  for (let i = 0; i < startSegCount; i++) {
     segments.push({ x: p.x - Math.cos(angle) * i * SEGMENT_SPACING, y: p.y - Math.sin(angle) * i * SEGMENT_SPACING });
   }
   return {
@@ -123,7 +124,10 @@ function tick() {
     }
  
     p.segments.unshift(newHead);
-    const targetSegCount = Math.floor(p.length);
+    // More segments per length unit than before = smoother curves through turns.
+    // (Previously 1 segment per length unit, which made short/young snakes look
+    // jagged since they had very few points to draw a curve through.)
+    const targetSegCount = Math.max(20, Math.floor(p.length * 2.2));
     while (p.segments.length > targetSegCount) p.segments.pop();
   });
  
