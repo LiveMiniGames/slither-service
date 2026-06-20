@@ -15,7 +15,7 @@ const FOOD_COUNT = 300;           // pellets on the map at once
 const TICK_RATE = 30;             // server updates per second (increased for smoothness)
 const BASE_SPEED = 3.6;
 const BOOST_SPEED = 6.5;
-const TURN_RATE = 0.35;           // how fast snakes can turn (significantly increased to match real slither.io's sharp turning)
+const TURN_RATE = 0.15;           // turning radius ~24px at base speed — kept wider than max snake thickness so curves stay visually clear instead of getting swallowed by a thick stroke
 const SEGMENT_SPACING = 4;        // tighter spacing = smoother body curves through turns
 const STARTING_LENGTH = 12;
 const FOOD_VALUE = 1;             // length gained per food eaten
@@ -321,3 +321,4 @@ server.listen(PORT, () => {
   console.log(`[Slither] Server running on port ${PORT}`);
   console.log(`[Slither] Host key: ${HOST_KEY}`);
 });
+ 
