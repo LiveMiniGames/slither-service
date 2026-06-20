@@ -10,7 +10,7 @@ const http = require('http');
 const PORT = process.env.PORT || 8080;
  
 // ── WORLD CONFIG ──────────────────────────────
-const WORLD_SIZE = 4000;          // width & height of the play area
+const WORLD_RADIUS = 2200;        // circular play area radius (slither.io style)
 const FOOD_COUNT = 300;           // pellets on the map at once
 const TICK_RATE = 30;             // server updates per second (increased for smoothness)
 const BASE_SPEED = 3.6;
@@ -31,9 +31,12 @@ let roundDurationMs = null;
 let leaderboardHistory = []; // past round winners
  
 function randPos() {
+  // Random point within the circular world (not just the bounding square)
+  const angle = Math.random() * Math.PI * 2;
+  const radius = Math.sqrt(Math.random()) * (WORLD_RADIUS * 0.85); // keep spawns away from the very edge
   return {
-    x: Math.random() * WORLD_SIZE - WORLD_SIZE / 2,
-    y: Math.random() * WORLD_SIZE - WORLD_SIZE / 2
+    x: Math.cos(angle) * radius,
+    y: Math.sin(angle) * radius
   };
 }
  
@@ -104,11 +107,20 @@ function tick() {
       y: head.y + Math.sin(p.angle) * speed
     };
  
-    // World boundary wraps around (easier than hard walls for casual play)
-    if (newHead.x > WORLD_SIZE / 2) newHead.x = -WORLD_SIZE / 2;
-    if (newHead.x < -WORLD_SIZE / 2) newHead.x = WORLD_SIZE / 2;
-    if (newHead.y > WORLD_SIZE / 2) newHead.y = -WORLD_SIZE / 2;
-    if (newHead.y < -WORLD_SIZE / 2) newHead.y = WORLD_SIZE / 2;
+    // Circular world boundary — hitting the edge kills you, just like real slither.io
+    const distFromCenter = Math.sqrt(newHead.x * newHead.x + newHead.y * newHead.y);
+    if (distFromCenter > WORLD_RADIUS) {
+      killPlayer(p);
+      return;
+    }
+ 
+    // Boosting drops a trail of small food behind the snake (visual + real slither.io behavior)
+    if (p.boosting && p.length > STARTING_LENGTH + 2) {
+      const tail = p.segments[p.segments.length - 1];
+      if (tail && Math.random() < 0.5) {
+        food.push({ id: nextFoodId++, x: tail.x, y: tail.y, value: 1, color: p.color, isBoostTrail: true });
+      }
+    }
  
     p.segments.unshift(newHead);
     const targetSegCount = Math.floor(p.length);
@@ -169,14 +181,16 @@ function killPlayer(p) {
  
 function broadcastState() {
   const alive = Object.values(players).filter(p => p.alive);
-  const leaderboard = [...alive].sort((a,b) => b.length - a.length).slice(0, 10)
-    .map(p => ({ id: p.id, name: p.name, length: Math.floor(p.length) }));
+  const leaderboard = [...alive].sort((a,b) => b.length - a.length).slice(0, 5)
+    .map(p => ({ id: p.id, name: p.name, length: Math.floor(p.length), x: p.segments[0]?.x || 0, y: p.segments[0]?.y || 0 }));
  
   const payload = {
     type: 'state',
     players: alive.map(p => ({
       id: p.id, name: p.name, color: p.color,
-      segments: p.segments.filter((_, i) => i % 1 === 0), // could thin for perf if needed
+      // Send every other segment once a snake gets long — keeps bandwidth/CPU stable
+      // as more players join, without visibly changing how the snake looks
+      segments: p.segments.length > 40 ? p.segments.filter((_, i) => i % 2 === 0) : p.segments,
       length: Math.floor(p.length)
     })),
     food: food,
@@ -248,7 +262,7 @@ wss.on('connection', (ws) => {
   ws.isHost = false;
  
   ws.send(JSON.stringify({
-    type: 'welcome', id, worldSize: WORLD_SIZE,
+    type: 'welcome', id, worldRadius: WORLD_RADIUS,
     roundActive, roundEndTime,
     leaderboardHistory
   }));
